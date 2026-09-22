@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0" />
+<title>SMARAN — Cognitive Companion</title>
+<style>
+/* =========================================================
+   SMARAN — plain HTML / CSS / JS prototype
+   No frameworks, no build step, no network calls: everything
+   needed to run is inside this one file (works fully offline).
+
+   Palette inspired by Assam: gamusa red/white weave, muga silk
+   gold, and tea-garden green. System fonts only (no font CDN).
+   ========================================================= */
+:root{
+  --cream:#FAF6EC; --cream-2:#F1ECDC; --paper:#FFFFFF;
+  --ink:#25301F; --ink-soft:#54614C; --ink-faint:#8B9484;
+
+  --tea:#2F5233; --tea-deep:#1E3A22; --tea-pale:#E4ECDF; --tea-mist:#CBDAC7;
+  --gamusa:#A63D2C; --gamusa-deep:#7E2C1F; --gamusa-soft:#F3DED6;
+  --muga:#C0902E; --muga-soft:#F3E6C4;
+  --flag:#B5482E; --flag-soft:#F4DED6;
+
+  --radius-sm:10px; --radius-md:18px; --radius-lg:28px;
+  --shadow-sm:0 2px 8px rgba(37,48,31,0.08);
+  --shadow-md:0 10px 30px rgba(37,48,31,0.12);
+
+  --font-display: Georgia, 'Palatino Linotype', 'Iowan Old Style', serif;
+  --font-body: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --tap:64px; --gap:1rem;
+}
+
+html{ font-size:17px; }
+html.large-text{ font-size:21px; }
+html.simple-mode .secondary-info{ display:none !important; }
+html.reduced-motion *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+html.high-contrast{
+  --cream:#FFFFFF; --cream-2:#FFFFFF; --paper:#FFFFFF;
+  --ink:#000000; --ink-soft:#000000; --ink-faint:#333333;
+  --tea:#0B4020; --tea-deep:#062D15; --tea-pale:#DDEFE1;
+  --gamusa:#8A0000; --gamusa-deep:#650000; --gamusa-soft:#FFE1DC;
+  --muga:#7A5200; --muga-soft:#FFEFC7;
+}
+html.high-contrast .card, html.high-contrast .btn{ border-width:2px !important; }
+
+*,*::before,*::after{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{ background:var(--cream); color:var(--ink); font-family:var(--font-body); min-height:100vh; -webkit-font-smoothing:antialiased; }
+h1,h2,h3,.display{ font-family:var(--font-display); color:var(--tea-deep); margin:0; font-weight:700; }
+p{ margin:0; }
+button{ font-family:inherit; }
+svg{ display:block; flex-shrink:0; }
+a{ color:inherit; }
+:focus-visible{ outline:3px solid var(--muga); outline-offset:3px; }
+
+.screen{ min-height:100vh; display:flex; flex-direction:column; }
+.container{ width:100%; max-width:880px; margin:0 auto; padding:0 1.25rem; box-sizing:border-box; }
+.grow{ flex:1; }
+
+.gamusa-strip{ height:12px; width:100%;
+  background-image: repeating-linear-gradient(90deg, var(--gamusa) 0 4px, var(--paper) 4px 6px, var(--gamusa) 6px 10px, var(--paper) 10px 34px);
+  opacity:0.9; }
+.gamusa-strip.thin{ height:7px; }
+.hills{ width:100%; height:110px; display:block; }
+
+.topbar{ position:sticky; top:0; z-index:20; background:var(--cream); border-bottom:1px solid var(--tea-mist); }
+.topbar-inner{ display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.25rem; max-width:880px; margin:0 auto; gap:0.75rem; }
+.iconbtn{ display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; border-radius:16px;
+  background:var(--paper); border:1.5px solid var(--tea-mist); color:var(--tea-deep); cursor:pointer; }
+.iconbtn:hover{ background:var(--tea-pale); }
+.badge{ display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; padding:0.4rem 0.75rem;
+  border-radius:999px; background:var(--tea-pale); color:var(--tea-deep); border:1px solid var(--tea-mist); white-space:nowrap; }
+.badge.offline{ background:var(--gamusa-soft); color:var(--gamusa-deep); border-color:#e3c1b6; }
+.badge.flag{ background:var(--flag-soft); color:var(--flag); border-color:#e6c3b8; }
+
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:0.6rem; min-height:var(--tap); padding:0.9rem 1.6rem;
+  border-radius:var(--radius-md); font-family:var(--font-body); font-weight:700; font-size:1.08rem; border:2px solid transparent;
+  cursor:pointer; text-align:center; line-height:1.25; }
+.btn-primary{ background:var(--tea); color:var(--paper); }
+.btn-primary:hover{ background:var(--tea-deep); }
+.btn-accent{ background:var(--gamusa); color:var(--paper); }
+.btn-accent:hover{ background:var(--gamusa-deep); }
+.btn-outline{ background:var(--paper); color:var(--tea-deep); border-color:var(--tea-mist); }
+.btn-outline:hover{ background:var(--tea-pale); }
+.btn-ghost{ background:transparent; color:var(--tea-deep); }
+.btn-block{ width:100%; }
+.btn-lg{ min-height:80px; font-size:1.3rem; border-radius:var(--radius-lg); }
+.btn[disabled]{ opacity:0.45; cursor:not-allowed; }
+
+.card{ background:var(--paper); border:1.5px solid var(--tea-mist); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); padding:1.4rem; }
+.card-tap{ cursor:pointer; width:100%; text-align:left; border:1.5px solid var(--tea-mist); display:flex; align-items:center; gap:1.1rem; }
+.card-tap:hover{ box-shadow:var(--shadow-md); border-color:var(--tea); }
+
+.chip{ display:inline-flex; align-items:center; gap:0.5rem; padding:0.65rem 1.1rem; border-radius:999px; border:2px solid var(--tea-mist);
+  background:var(--paper); font-weight:700; cursor:pointer; min-height:52px; }
+.chip.selected{ background:var(--tea); color:var(--paper); border-color:var(--tea); }
+
+.meter{ height:14px; border-radius:999px; background:var(--tea-pale); overflow:hidden; }
+.meter > span{ display:block; height:100%; background:var(--tea); border-radius:999px; }
+.meter.muga > span{ background:var(--muga); }
+
+.stack{ display:flex; flex-direction:column; gap:var(--gap); }
+.row{ display:flex; align-items:center; gap:var(--gap); }
+.wrap{ flex-wrap:wrap; }
+.center{ text-align:center; }
+.muted{ color:var(--ink-soft); }
+.faint{ color:var(--ink-faint); }
+.between{ justify-content:space-between; }
+
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.grid-auto{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1.1rem; }
+@media (max-width:640px){ .grid-2{ grid-template-columns:1fr; } }
+
+.puzzle-piece{ border-radius:10px; border:2px solid var(--paper); cursor:pointer; background-repeat:no-repeat; aspect-ratio:1/1; }
+.puzzle-piece.selected{ outline:4px solid var(--muga); outline-offset:-4px; }
+.puzzle-piece.placed-correct{ outline:4px solid var(--tea); outline-offset:-4px; }
+
+.fade-in{ animation:fadeIn .35s ease both; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+.toggle{ width:58px; height:34px; border-radius:999px; position:relative; flex-shrink:0; cursor:pointer; background:var(--tea-mist); transition:background .2s; }
+.toggle.on{ background:var(--tea); }
+.toggle .knob{ position:absolute; top:3px; left:3px; width:28px; height:28px; border-radius:50%; background:var(--paper); transition:left .2s; box-shadow:var(--shadow-sm); }
+.toggle.on .knob{ left:27px; }
+.toggle-row{ display:flex; align-items:center; justify-content:space-between; width:100%; min-height:56px; }
+.toggle-row .toggle-label{ font-weight:700; }
+
+.hbar-row{ display:grid; grid-template-columns:120px 1fr 60px; align-items:center; gap:0.75rem; }
+.hbar-track{ height:16px; border-radius:999px; background:var(--tea-pale); overflow:hidden; }
+.hbar-fill{ height:100%; border-radius:999px; }
+
+.sr-only{ position:absolute; width:1px;height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+"use strict";
+
+/* =========================================================
+   Icons — inline SVG markup, no external icon library
+   ========================================================= */
+const ICONS = {
+  home: '<path d="M4 11L12 4l8 7"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/>',
+  puzzle: '<path d="M8 4h4a1 1 0 0 1 1 1v2.2a1.8 1.8 0 1 0 0 3.6V13a1 1 0 0 1-1 1h-2.2a1.8 1.8 0 1 1-3.6 0H4a1 1 0 0 1-1-1V9a1.8 1.8 0 1 0 0-3.6V4a1 1 0 0 1 1-1h3.2a1.8 1.8 0 0 1 3.6 0"/>',
+  ear: '<path d="M8 13a5 5 0 0 1 5-8 6 6 0 0 1 6 6c0 3-2 4-2 6a3 3 0 0 1-6 0"/><path d="M8 13a3 3 0 0 0 3 3"/>',
+  list: '<circle cx="5" cy="6" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="5" cy="18" r="1.3"/><path d="M9 6h11M9 12h11M9 18h11"/>',
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  users: '<circle cx="9" cy="8" r="3.3"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><path d="M16.5 6.5A3.3 3.3 0 0 1 17 13"/><path d="M17 14c2.8.5 4.5 2.7 4.5 6"/>',
+  settings: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.8a1.7 1.7 0 0 0 .34 1.9l.06.06a2 2 0 1 1-2.9 2.9l-.06-.06a1.7 1.7 0 0 0-1.9-.34 1.7 1.7 0 0 0-1 1.56V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.56 1.7 1.7 0 0 0-1.9.34l-.06.06a2 2 0 1 1-2.9-2.9l.06-.06a1.7 1.7 0 0 0 .34-1.9 1.7 1.7 0 0 0-1.56-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.56-1.1 1.7 1.7 0 0 0-.34-1.9l-.06-.06a2 2 0 1 1 2.9-2.9l.06.06a1.7 1.7 0 0 0 1.9.34H10a1.7 1.7 0 0 0 1-1.56V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.9-.34l.06-.06a2 2 0 1 1 2.9 2.9l-.06.06a1.7 1.7 0 0 0-.34 1.9V10a1.7 1.7 0 0 0 1.56 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.8z"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/>',
+  wifiOff: '<path d="M2 8.82a15 15 0 0 1 4.17-2.65M22 8.82a15 15 0 0 0-6.5-3.5M8.5 16.3a7 7 0 0 1 7 0"/><path d="M12 20h.01"/><path d="M2 2l20 20"/>',
+  wifi: '<path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5.5 12.5a10 10 0 0 1 13 0"/><path d="M8.5 16.3a7 7 0 0 1 7 0"/><path d="M12 20h.01"/>',
+  back: '<path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/>',
+  forward: '<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>',
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  x: '<path d="M18 6L6 18"/><path d="M6 6l12 12"/>',
+  star: '<path d="M12 2.5l2.9 6.3 6.7.6-5.1 4.5 1.6 6.6-6.1-3.6-6.1 3.6 1.6-6.6-5.1-4.5 6.7-.6z"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>',
+  volume: '<path d="M4 9v6h4l5 5V4L8 9z"/><path d="M17 8a6 6 0 0 1 0 8"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>',
+  heart: '<path d="M12 20s-7-4.4-9.7-8.9C.6 8 2 4.5 5.4 4c2-.3 3.7.8 4.6 2.4C10.9 4.8 12.6 3.7 14.6 4c3.4.5 4.8 4 3.1 7.1C15 15.6 12 20 12 20z"/>',
+  map: '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/>',
+  box: '<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+  sun: '<circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>',
+  leaf: '<path d="M5 21c9-1 13-6 14-15C10 7 6 12 5 21z"/>',
+  award: '<circle cx="12" cy="8" r="5.5"/><path d="M8.5 13L7 21l5-2.5L17 21l-1.5-8"/>',
+  flag: '<path d="M5 21V4"/><path d="M5 4h13l-3 4 3 4H5"/>',
+  eye: '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>',
+};
+function icon(name, size, cls){
+  size = size || 24; cls = cls || "";
+  return '<svg class="icon ' + cls + '" width="' + size + '" height="' + size +
+    '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
+}
+
+/* =========================================================
+   Languages & translations
+   ========================================================= */
+const LANGUAGES = [
+  {code:"en", native:"English", complete:true},
+  {code:"as", native:"অসমীয়া", complete:true},
+  {code:"bn", native:"বাংলা", complete:false},
+  {code:"mni", native:"ꯃꯤꯇꯩꯂꯣꯟ", complete:false},
+  {code:"kha", native:"Khasi", complete:false},
+];
+
+const STRINGS = {
+  en:{
+    appName:"SMARAN", tagline:"A caregiver-guided cognitive companion for elderly memory care",
+    getStarted:"Get Started", chooseRole:"Who is using SMARAN right now?",
+    patient:"I am the Patient", patientSub:"Play today's memory activities",
+    caregiver:"I am a Caregiver", caregiverSub:"View recall insights & assign activities",
+    welcome:"Welcome back", todaysActivities:"Today's Activities",
+    myProgress:"My Progress", familiarWorld:"My Familiar World",
+    settings:"Settings", back:"Back", play:"Play",
+    listen:"Listen", great:"Great work!",
+    playAgain:"Play Again", home:"Home",
+    score:"Score", time:"Time", mistakes:"Mistakes",
+    hints:"Hints Used", difficulty:"Difficulty", nextDifficulty:"Next Difficulty",
+    easy:"Easy", medium:"Medium", hard:"Hard",
+    backToActivities:"Back to Today's Activities", viewProgress:"View My Progress",
+    offline:"Offline Mode", offlineDesc:"Activities remain available on this device without internet.",
+    online:"Online", language:"Language", accessibility:"Accessibility",
+    largeText:"Larger Text", highContrast:"High Contrast",
+    reducedAnimation:"Reduced Animation", simpleMode:"Simple Mode",
+    voiceAssist:"Voice Assistance", save:"Save Changes", saved:"Settings saved",
+    memory:"Memory", attention:"Attention", recognition:"Recognition",
+    executive:"Executive Function", overall:"Overall Activity",
+    thisWeek:"This week", people:"Familiar People", places:"Familiar Places",
+    objects:"Familiar Objects", routines:"Familiar Routines",
+    jigsawTitle:"Adaptive Jigsaw", jigsawDesc:"Piece together a familiar picture",
+    familiarTitle:"Familiar / Unfamiliar", familiarDesc:"Recognise faces and places",
+    audioTitle:"Familiar Audio", audioDesc:"Listen closely and remember",
+    routineTitle:"Daily Routine Recall", routineDesc:"Put the day back in order",
+    tapToSwap:"Tap two pieces to swap them into place",
+    isFamiliar:"Is this familiar to you?", familiar:"Familiar", notFamiliar:"Not Familiar",
+    whoIsThis:"Who is this?", whoSpeaking:"Who was speaking?",
+    tapOrder:"Tap the steps in the order they happen",
+    yourOrder:"Your order",
+    encourage1:"Wonderful memory today!", encourage2:"You're doing beautifully.",
+    encourage3:"Every bit of practice helps. Well done.",
+    noMedicalClaim:"SMARAN is a cognitive activity and screening aid — not a medical diagnosis.",
+    increasing:"moving up a step — well done!", maintaining:"staying at the same level",
+    decreasing:"easing down a step so it feels comfortable",
+    of:"of",
+    cgTitle:"Caregiver Dashboard", cgPatient:"Patient",
+    cgTrigger:"Memory Trigger Analysis", cgTriggerDesc:"Which kind of stimulus this patient recalls best — not a score, a pattern.",
+    cgRecent:"Recent Activity", cgDomains:"Recall by Domain", cgFlag:"Attention flag",
+    cgFlagText:"Executive Function has dipped 3 points this week — consider mentioning this at the next check-up.",
+    cgAssign:"Assign for Today", cgAssignDesc:"(demo only — selections are not saved to a server)",
+    cgNote:"All figures on this screen are illustrative demo data for the prototype walkthrough.",
+    bestStimulus:"Best-recalled stimulus type", people_:"People (photos)", places_:"Places (photos)", voices_:"Familiar voices",
+    routines_:"Routines",
+  },
+  as:{
+    appName:"স্মৰণ", tagline:"বয়সৱৃদ্ধ স্মৃতি যত্নৰ বাবে পৰিচাৰক-নিৰ্দেশিত চিন্তামূলক সংগী",
+    getStarted:"আৰম্ভ কৰক", chooseRole:"এতিয়া স্মৰণ কোনে ব্যৱহাৰ কৰিছে?",
+    patient:"মই ৰোগী", patientSub:"আজিৰ স্মৃতি কাৰ্যকলাপ খেলক",
+    caregiver:"মই পৰিচাৰক", caregiverSub:"স্মৃতি অন্তৰ্দৃষ্টি চাওক আৰু কাৰ্যকলাপ নিৰ্ধাৰণ কৰক",
+    welcome:"পুনৰ স্বাগতম", todaysActivities:"আজিৰ কাৰ্যকলাপ",
+    myProgress:"মোৰ প্ৰগতি", familiarWorld:"মোৰ চিনাকি জগত",
+    settings:"ছেটিংছ", back:"পিছলৈ", play:"খেলক",
+    listen:"শুনক", great:"বহুত ভাল!",
+    playAgain:"পুনৰ খেলক", home:"গৃহ",
+    score:"স্কোৰ", time:"সময়", mistakes:"ভুল",
+    hints:"ইংগিত ব্যৱহৃত", difficulty:"কঠিনতা", nextDifficulty:"পৰৱৰ্তী কঠিনতা",
+    easy:"সহজ", medium:"মধ্যম", hard:"কঠিন",
+    backToActivities:"আজিৰ কাৰ্যকলাপলৈ উভতি যাওক", viewProgress:"মোৰ প্ৰগতি চাওক",
+    offline:"অফলাইন মোড", offlineDesc:"ইণ্টাৰনেট নোহোৱাকৈয়ো কাৰ্যকলাপবোৰ এই ডিভাইচত উপলব্ধ থাকিব।",
+    online:"অনলাইন", language:"ভাষা", accessibility:"সাধ্যগম্যতা",
+    largeText:"ডাঙৰ আখৰ", highContrast:"উচ্চ প্ৰতিলোম",
+    reducedAnimation:"কম এনিমেছন", simpleMode:"সৰল মোড",
+    voiceAssist:"কণ্ঠধ্বনি সহায়", save:"সংৰক্ষণ কৰক", saved:"ছেটিংছ সংৰক্ষিত হ\u09cdল",
+    memory:"স্মৃতি", attention:"মনোযোগ", recognition:"চিনাক্তকৰণ",
+    executive:"কাৰ্যনিৰ্বাহী কাৰ্য", overall:"সামগ্ৰিক কাৰ্যকলাপ",
+    thisWeek:"এই সপ্তাহত", people:"চিনাকি মানুহ", places:"চিনাকি ঠাই",
+    objects:"চিনাকি বস্তু", routines:"চিনাকি নিয়ম",
+    jigsawTitle:"জিগ\u200cছ\u09cb পাজল", jigsawDesc:"এখন চিনাকি ছবি জোৰা লগাওক",
+    familiarTitle:"চিনাকি / অচিনাকি", familiarDesc:"মুখ আৰু ঠাই চিনাক্ত কৰক",
+    audioTitle:"চিনাকি শ্ৰৱণ", audioDesc:"মনোযোগেৰে শুনক আৰু মনত ৰাখক",
+    routineTitle:"দৈনিক কাৰ্য মনত পেলোৱা", routineDesc:"দিনটোৰ কাম শুদ্ধ ক্ৰমত থওক",
+    tapToSwap:"স্থান সলনি কৰিবলৈ দুটা টুকুৰাত টিপক",
+    isFamiliar:"এইটো আপোনাৰ চিনাকি নেকি?", familiar:"চিনাকি", notFamiliar:"অচিনাকি",
+    whoIsThis:"এওঁ কোন?", whoSpeaking:"কোনে কথা কৈছিল?",
+    tapOrder:"পদক্ষেপবোৰ ক্ৰম অনুসৰি টিপক",
+    yourOrder:"আপোনাৰ ক্ৰম",
+    encourage1:"আজি আপোনাৰ স্মৃতি অসাধাৰণ!", encourage2:"আপুনি সুন্দৰভাৱে কৰি আছে।",
+    encourage3:"প্ৰতিটো অনুশীলনে সহায় কৰে। ভাল কৰিলে।",
+    noMedicalClaim:"স্মৰণ এটা চিন্তামূলক কাৰ্যকলাপ আৰু স্ক্ৰীনিং সহায়ক — চিকিৎসা নিৰ্ণয় নহয়।",
+    increasing:"এক স্তৰ ওপৰলৈ — ভাল কৰিলে!", maintaining:"একে স্তৰতে থকা",
+    decreasing:"আৰামদায়ক হোৱাকৈ এক স্তৰ তললৈ",
+    of:"ৰ",
+    cgTitle:"পৰিচাৰক ডেশ্ব\u09cbৰ্ড", cgPatient:"ৰোগী",
+    cgTrigger:"স্মৃতি ট্ৰিগাৰ বিশ্লেষণ", cgTriggerDesc:"এই ৰোগীয়ে কি ধৰণৰ উদ্দীপকক সবচেয়ে ভাল মনত ৰাখে — স্ক\u09cbৰ নহয়, এটা আৰ্হি।",
+    cgRecent:"শেহতীয়া কাৰ্যকলাপ", cgDomains:"ক্ষেত্ৰ অনুসৰি স্মৃতি", cgFlag:"মনোযোগ পতাকা",
+    cgFlagText:"কাৰ্যনিৰ্বাহী কাৰ্য এই সপ্তাহত ৩ পইণ্ট কমিছে — পৰৱৰ্তী পৰীক্ষাত ইয়াৰ কথা উল্লেখ কৰাটো বিবেচনা কৰক।",
+    cgAssign:"আজিৰ বাবে নিৰ্ধাৰণ কৰক", cgAssignDesc:"(কেৱল ডেম\u09cb — নিৰ্বাচনবোৰ ছাৰ্ভাৰত সংৰক্ষণ কৰা নহয়)",
+    cgNote:"এই স্ক্ৰীনৰ সকলো তথ্য প্ৰ\u09cbট\u09cbটাইপ ডেম\u09cbৰ বাবে চিত্ৰমূলক।",
+    bestStimulus:"সৰ্বোত্তমভাৱে মনত ৰখা উদ্দীপক", people_:"মানুহ (ফট\u09cb)", places_:"ঠাই (ফট\u09cb)", voices_:"চিনাকি মাত",
+    routines_:"নিয়ম",
+  },
+};
+function tFor(lang){ return STRINGS[lang] || STRINGS.en; }
+
+/* =========================================================
+   Mock / demo data (no backend, no ML — static + rule-based)
+   ========================================================= */
+const PATIENT_NAME = "Deuta";
+
+const GAMES = [
+  {id:"jigsaw", icon:"puzzle", titleKey:"jigsawTitle", descKey:"jigsawDesc", color:"tea"},
+  {id:"familiar", icon:"users", titleKey:"familiarTitle", descKey:"familiarDesc", color:"gamusa"},
+  {id:"audio", icon:"ear", titleKey:"audioTitle", descKey:"audioDesc", color:"muga"},
+  {id:"routine", icon:"list", titleKey:"routineTitle", descKey:"routineDesc", color:"tea"},
+];
+
+const FAMILIAR_PEOPLE = [
+  {name:"Runumi", relation:"Daughter", icon:"heart"},
+  {name:"Nayan", relation:"Grandson", icon:"heart"},
+  {name:"Dr. Bora", relation:"Family Doctor", icon:"users"},
+  {name:"Ravi", relation:"Neighbour", icon:"users"},
+];
+const FAMILIAR_PLACES = [
+  {name:"Home Courtyard", relation:"Where you have tea", icon:"home"},
+  {name:"Kamakhya Temple", relation:"Visited every year", icon:"map"},
+  {name:"Village Tea Garden", relation:"Morning walk route", icon:"leaf"},
+  {name:"Guwahati Market", relation:"Sunday shopping", icon:"box"},
+];
+const FAMILIAR_OBJECTS = [
+  {name:"Red Gamusa", relation:"Given at Bihu", icon:"box"},
+  {name:"Brass Tea Cup", relation:"Used every morning", icon:"box"},
+  {name:"Old Radio", relation:"Evening news", icon:"box"},
+  {name:"Walking Stick", relation:"Gifted by Nayan", icon:"box"},
+];
+const FAMILIAR_ROUTINES = [
+  {name:"Morning Tea", relation:"6:30 AM", icon:"sun"},
+  {name:"Medicine after Breakfast", relation:"8:00 AM", icon:"clock"},
+  {name:"Evening Walk", relation:"5:00 PM", icon:"leaf"},
+  {name:"Bihu Visit", relation:"Once a year", icon:"star"},
+];
+
+const ROUTINE_STEPS = [
+  {id:"wake", label:"Wake Up", icon:"sun"},
+  {id:"brush", label:"Brush Teeth", icon:"check"},
+  {id:"breakfast", label:"Breakfast", icon:"box"},
+  {id:"medicine", label:"Take Medicine", icon:"heart"},
+  {id:"walk", label:"Morning Walk", icon:"leaf"},
+];
+
+const AUDIO_CLIPS = [
+  {speaker:"Nayan (Grandson)", text:"Hello Deuta, this is Nayan. I will visit you this Sunday with the children.",
+   options:["Nayan (Grandson)","Runumi (Daughter)","Dr. Bora","Ravi (Neighbour)"]},
+  {speaker:"Runumi (Daughter)", text:"Deuta, don't forget to take your evening walk today, the weather is very pleasant.",
+   options:["Ravi (Neighbour)","Runumi (Daughter)","Nayan (Grandson)","Dr. Bora"]},
+  {speaker:"Dr. Bora", text:"Good morning, this is Dr. Bora calling to remind you about your check-up on Friday.",
+   options:["Dr. Bora","Nayan (Grandson)","Ravi (Neighbour)","Runumi (Daughter)"]},
+];
+
+const FAMILIAR_CARDS = [
+  {name:"Runumi", isFamiliar:true, options:["Runumi — Daughter","Anjali — Neighbour","Priya — Nurse","Mina — Shopkeeper"]},
+  {name:"Unknown Face", isFamiliar:false},
+  {name:"Nayan", isFamiliar:true, options:["Nayan — Grandson","Rahul — Postman","Deepak — Driver","Suresh — Gardener"]},
+  {name:"Kamakhya Temple", isFamiliar:true, options:["Kamakhya Temple","City Mall","Railway Station","Bus Depot"]},
+  {name:"Unfamiliar Building", isFamiliar:false},
+];
+
+const PROGRESS_DOMAINS = [
+  {key:"memory", value:78, trend:6},
+  {key:"attention", value:64, trend:2},
+  {key:"recognition", value:82, trend:9},
+  {key:"executive", value:58, trend:-3},
+  {key:"overall", value:71, trend:4},
+];
+const WEEK_TREND = [52,58,55,64,60,68,71];
+
+/* Caregiver dashboard mock data — illustrative only, no ML behind it */
+const CAREGIVER_RECENT = [
+  {game:"Adaptive Jigsaw", when:"Today, 9:12 AM", score:"92%"},
+  {game:"Familiar Audio", when:"Yesterday, 5:40 PM", score:"75%"},
+  {game:"Daily Routine Recall", when:"Yesterday, 9:05 AM", score:"60%"},
+];
+const TRIGGER_ANALYSIS = [
+  {key:"people_", value:88},
+  {key:"voices_", value:74},
+  {key:"routines_", value:61},
+  {key:"places_", value:47},
+];
+
+/* =========================================================
+   Adaptive difficulty — simple rule-based thresholds only,
+   no machine learning: >85% harder, 60-85% same, <60% easier.
+   ========================================================= */
+function nextDifficulty(current, accuracyPct){
+  const order = ["easy","medium","hard"];
+  const idx = order.indexOf(current);
+  if(accuracyPct > 85) return order[Math.min(idx+1, order.length-1)];
+  if(accuracyPct < 60) return order[Math.max(idx-1, 0)];
+  return current;
+}
+
+/* =========================================================
+   State + persistence (localStorage only, no server)
+   ========================================================= */
+function loadLS(key, fallback){
+  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; }
+}
+function saveLS(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+const DEFAULT_A11Y = {largeText:false, highContrast:false, reducedAnimation:false, simpleMode:false, voiceAssist:true};
+const DEFAULT_DIFF = {jigsaw:"medium", familiar:"medium", audio:"medium", routine:"medium"};
+
+const S = {
+  route: location.hash.slice(1) || "/",
+  lang: loadLS("smaran_lang", "en"),
+  a11y: loadLS("smaran_a11y", DEFAULT_A11Y),
+  difficulty: loadLS("smaran_difficulty", DEFAULT_DIFF),
+  offline: false,
+  lastResult: null,
+  fwTab: "people",
+  settingsSaved: false,
+  game: null, // per-game transient state, see setupGameState()
+};
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    const tmp=a[i]; a[i]=a[j]; a[j]=tmp;
+  }
+  return a;
+}
+
+/* SVG "photo" used by the jigsaw — drawn once, sliced via
+   background-position so every piece shares one image. No
+   external image file, so it always loads offline. */
+function sceneDataUri(){
+  const svg =
+    "<svg xmlns='http://www.w3.org/2000/svg' width='480' height='480'>" +
+    "<rect width='480' height='480' fill='%23EFE6C8'/>" +
+    "<circle cx='390' cy='90' r='46' fill='%23C0902E'/>" +
+    "<path d='M0,260 C90,200 180,290 270,230 C360,170 420,240 480,210 L480,480 L0,480 Z' fill='%233E6B44'/>" +
+    "<path d='M0,320 C110,280 220,350 330,300 C400,270 440,310 480,290 L480,480 L0,480 Z' fill='%232F5233'/>" +
+    "<path d='M0,380 C120,350 260,410 480,360 L480,480 L0,480 Z' fill='%231E3A22'/>" +
+    "<circle cx='120' cy='300' r='14' fill='%234C7A50'/><circle cx='150' cy='310' r='14' fill='%234C7A50'/>" +
+    "<circle cx='180' cy='300' r='14' fill='%234C7A50'/><circle cx='240' cy='330' r='14' fill='%234C7A50'/>" +
+    "<circle cx='270' cy='340' r='14' fill='%234C7A50'/>" +
+    "<rect x='0' y='450' width='480' height='30' fill='%23A63D2C'/>" +
+    "<rect x='0' y='450' width='480' height='6' fill='%23FAF6EC'/>" +
+    "</svg>";
+  return "data:image/svg+xml," + svg.replace(/#/g, "%23").replace(/'/g, "%27");
+}
+const SCENE_URI = sceneDataUri();
+
+/* =========================================================
+   Shared UI fragments (return HTML strings)
+   ========================================================= */
+function offlineBadge(t){
+  return '<span class="badge ' + (S.offline?"offline":"") + '">' +
+    icon(S.offline?"wifiOff":"wifi", 16) + (S.offline ? t.offline : t.online) + "</span>";
+}
+function topBar(t, title, opts){
+  opts = opts || {};
+  const showBack = opts.showBack !== false;
+  const right = opts.right || "";
+  return (
+    '<header class="topbar">' +
+      '<div class="gamusa-strip thin"></div>' +
+      '<div class="topbar-inner">' +
+        '<div class="row">' +
+          (showBack ? '<button class="iconbtn" aria-label="' + t.back + '" data-action="go-back">' + icon("back") + "</button>" : "") +
+          (title ? '<h2 style="font-size:1.3rem">' + title + "</h2>" : "") +
+        "</div>" +
+        '<div class="row">' + right + offlineBadge(t) + "</div>" +
+      "</div>" +
+    "</header>"
+  );
+}
+function teaHills(){
+  return (
+    '<svg class="hills" viewBox="0 0 600 110" preserveAspectRatio="none">' +
+      '<path d="M0,90 C80,40 160,100 240,60 C320,20 400,90 480,50 C540,25 580,55 600,45 L600,110 L0,110 Z" fill="var(--tea-pale)"/>' +
+      '<path d="M0,100 C100,70 200,110 300,80 C400,50 500,100 600,75 L600,110 L0,110 Z" fill="var(--tea)" opacity="0.85"/>' +
+      '<circle cx="500" cy="28" r="18" fill="var(--muga)"/>' +
+    "</svg>"
+  );
+}
+function bigTouchCard(opts){
+  const sub = opts.sub ? '<span class="muted secondary-info" style="display:block;margin-top:2px">' + opts.sub + "</span>" : "";
+  const bg = opts.accent === "gamusa" ? "var(--gamusa-soft)" : opts.accent === "muga" ? "var(--muga-soft)" : "var(--tea-pale)";
+  const fg = opts.accent === "gamusa" ? "var(--gamusa-deep)" : opts.accent === "muga" ? "var(--muga)" : "var(--tea-deep)";
+  return (
+    '<button class="card card-tap fade-in" data-action="' + opts.action + '"' + (opts.data ? ' ' + opts.data : "") + '>' +
+      '<span style="width:64px;height:64px;border-radius:18px;flex-shrink:0;background:' + bg + ";color:" + fg +
+        ';display:flex;align-items:center;justify-content:center">' + icon(opts.icon, 30) + "</span>" +
+      '<span style="flex:1">' +
+        '<span class="display" style="display:block;font-size:1.25rem">' + opts.title + "</span>" + sub +
+      "</span>" +
+      '<span style="color:var(--ink-faint);transform:rotate(180deg);display:flex">' + icon("back", 22) + "</span>" +
+    "</button>"
+  );
+}
+function toggleRow(label, key, on){
+  return (
+    '<div class="toggle-row">' +
+      '<span class="toggle-label">' + label + "</span>" +
+      '<span class="toggle ' + (on?"on":"") + '" data-action="toggle-a11y" data-key="' + key + '"><span class="knob"></span></span>' +
+    "</div>"
+  );
+}
+
+/* =========================================================
+   PAGES
+   ========================================================= */
+function pageLanding(t){
+  return (
+    '<div class="screen">' +
+      '<div class="gamusa-strip"></div>' +
+      '<div class="grow container" style="display:flex;flex-direction:column;justify-content:center;padding-top:2rem;padding-bottom:2rem">' +
+        '<div class="center stack" style="gap:1.6rem;max-width:560px;margin:0 auto">' +
+          '<div style="width:96px;height:96px;border-radius:28px;margin:0 auto;background:var(--tea);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-md)">' +
+            icon("leaf", 48) +
+          "</div>" +
+          "<div>" +
+            '<h1 class="display" style="font-size:3rem;line-height:1.05">' + t.appName + "</h1>" +
+            '<p class="muted" style="font-size:1.2rem;margin-top:0.75rem">' + t.tagline + "</p>" +
+          "</div>" +
+          '<button class="btn btn-primary btn-lg btn-block" data-action="nav" data-path="/role">' +
+            t.getStarted + " " + icon("forward") +
+          "</button>" +
+          '<p class="faint secondary-info" style="font-size:0.95rem">' + t.noMedicalClaim + "</p>" +
+        "</div>" +
+      "</div>" +
+      teaHills() +
+    "</div>"
+  );
+}
+
+function pageRole(t){
+  return (
+    '<div class="screen">' +
+      topBar(t, "", {showBack:false}) +
+      '<div class="grow container" style="padding-top:2rem;padding-bottom:3rem">' +
+        '<h1 class="display center" style="font-size:1.9rem;margin-bottom:1.75rem">' + t.chooseRole + "</h1>" +
+        '<div class="stack" style="max-width:560px;margin:0 auto">' +
+          bigTouchCard({icon:"users", title:t.patient, sub:t.patientSub, accent:"tea", action:"nav", data:'data-path="/patient"'}) +
+          bigTouchCard({icon:"eye", title:t.caregiver, sub:t.caregiverSub, accent:"gamusa", action:"nav", data:'data-path="/caregiver"'}) +
+        "</div>" +
+      "</div>" +
+    "</div>"
+  );
+}
+
+function pagePatientHome(t){
+  const right = '<button class="iconbtn" aria-label="' + t.settings + '" data-action="nav" data-path="/settings">' + icon("settings") + "</button>";
+  return (
+    '<div class="screen">' +
+      topBar(t, t.appName, {showBack:false, right:right}) +
+      '<div class="grow container" style="padding-top:2rem;padding-bottom:2rem">' +
+        '<p class="muted" style="font-size:1.15rem;margin-bottom:0.25rem">' + t.welcome + ",</p>" +
+        '<h1 class="display" style="font-size:2.3rem;margin-bottom:2rem">' + PATIENT_NAME + "</h1>" +
+        '<div class="stack" style="max-width:560px">' +
+          bigTouchCard({icon:"puzzle", title:t.todaysActivities, accent:"tea", action:"nav", data:'data-path="/patient/today"'}) +
+          bigTouchCard({icon:"chart", title:t.myProgress, accent:"muga", action:"nav", data:'data-path="/patient/progress"'}) +
+          bigTouchCard({icon:"heart", title:t.familiarWorld, accent:"gamusa", action:"nav", data:'data-path="/patient/familiar-world"'}) +
+        "</div>" +
+      "</div>" +
+      teaHills() +
+    "</div>"
+  );
+}
+
+function pageToday(t){
+  let cards = "";
+  GAMES.forEach(function(g){
+    cards += bigTouchCard({icon:g.icon, title:t[g.titleKey], sub:t[g.descKey], accent:g.color, action:"nav", data:'data-path="/patient/game/' + g.id + '"'});
+  });
+  return (
+    '<div class="screen">' +
+      topBar(t, t.todaysActivities) +
+      '<div class="grow container" style="padding-top:1.75rem;padding-bottom:2rem">' +
+        '<div class="stack">' + cards + "</div>" +
+      "</div>" +
+    "</div>"
+  );
+}
+
+function pageSettings(t){
+  let langChips = "";
+  LANGUAGES.forEach(function(l){
+    langChips += '<button class="chip ' + (S.lang===l.code?"selected":"") + '" data-action="set-lang" data-lang="' + l.code + '">' +
+      l.native + (!l.complete ? ' <span style="font-size:0.75rem;opacity:0.7">(partial)</span>' : "") + "</button>";
+  });
+  const a = S.a11y;
+  return (
+    '<div class="screen">' +
+      topBar(t, t.settings) +
+      '<div class="grow container" style="padding-top:1.75rem;padding-bottom:3rem">' +
+        '<div class="stack" style="max-width:600px">' +
+
+          '<section class="card stack">' +
+            '<div class="row">' + icon("globe") + '<h3 style="font-size:1.2rem">' + t.language + "</h3></div>" +
+            '<div class="row wrap">' + langChips + "</div>" +
+          "</section>" +
+
+          '<section class="card stack">' +
+            '<div class="row">' + icon("settings") + '<h3 style="font-size:1.2rem">' + t.accessibility + "</h3></div>" +
+            toggleRow(t.largeText, "largeText", a.largeText) +
+            toggleRow(t.highContrast, "highContrast", a.highContrast) +
+            toggleRow(t.reducedAnimation, "reducedAnimation", a.reducedAnimation) +
+            toggleRow(t.simpleMode, "simpleMode", a.simpleMode) +
+            toggleRow(t.voiceAssist, "voiceAssist", a.voiceAssist) +
+          "</section>" +
+
+          '<section class="card stack">' +
+            '<div class="row">' + icon("wifiOff") + '<h3 style="font-size:1.2rem">' + t.offline + "</h3></div>" +
+            '<p class="muted">' + t.offlineDesc + "</p>" +
+            '<div class="toggle-row"><span class="toggle-label">' + (S.offline?t.offline:t.online) + '</span>' +
+              '<span class="toggle ' + (S.offline?"on":"") + '" data-action="toggle-offline"><span class="knob"></span></span></div>' +
+          "</section>" +
+
+          '<button class="btn btn-primary btn-lg" data-action="save-settings">' + t.save + "</button>" +
+          (S.settingsSaved ? '<p class="center" style="color:var(--tea);font-weight:700">' + t.saved + "</p>" : "") +
+        "</div>" +
+      "</div>" +
+    "</div>"
+  );
+}
+
+function miniTrendChart(data){
+  const w=280,h=90,max=100;
+  const pts = data.map(function(v,i){ return [(i/(data.length-1))*w, h-(v/max)*h]; });
+  let path = "";
+  pts.forEach(function(p,i){ path += (i===0?"M":"L") + p[0].toFixed(1) + "," + p[1].toFixed(1) + " "; });
+  let dots = "";
+  pts.forEach(function(p,i){
+    const last = i===pts.length-1;
+    dots += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (last?5:3) + '" fill="' + (last?"var(--muga)":"var(--tea)") + '"/>';
+  });
+  const polyPts = pts.map(function(p){ return p.join(","); }).join(" ");
+  return (
+    '<svg viewBox="0 0 ' + w + " " + h + '" style="width:100%;height:100px">' +
+      '<polyline points="' + polyPts + '" fill="none" stroke="var(--tea-mist)" stroke-width="10" stroke-linecap="round"/>' +
+      '<path d="' + path + '" fill="none" stroke="var(--tea)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      dots +
+    "</svg>"
+  );
+}
+
+function pageProgress(t){
+  let rows = "";
+  PROGRESS_DOMAINS.forEach(function(d){
+    const trendColor = d.trend>=0 ? "var(--tea)" : "var(--gamusa)";
+    rows += (
+      '<div class="card">' +
+        '<div class="row between" style="margin-bottom:0.6rem">' +
+          '<span style="font-weight:700;font-size:1.1rem">' + t[d.key] + "</span>" +
+          '<span class="muted">' + d.value + "%" +
+            '<span style="color:' + trendColor + ';margin-left:6px;font-weight:700">' + (d.trend>=0?"▲":"▼") + " " + Math.abs(d.trend) + "</span>" +
+          "</span>" +
+        "</div>" +
+        '<div class="meter muga"><span style="width:' + d.value + '%"></span></div>' +
+      "</div>"
+    );
+  });
+  return (
+    '<div class="screen">' +
+      topBar(t, t.myProgress) +
+      '<div class="grow container" style="padding-top:1.75rem;padding-bottom:3rem">' +
+        '<div class="card" style="margin-bottom:1.25rem">' +
+          '<p class="muted" style="margin-bottom:0.5rem">' + t.overall + " — " + t.thisWeek + "</p>" +
+          miniTrendChart(WEEK_TREND) +
+        "</div>" +
+        '<div class="stack">' + rows + "</div>" +
+        '<p class="faint secondary-info center" style="margin-top:1.5rem">' + t.noMedicalClaim + "</p>" +
+      "</div>" +
+    "</div>"
+  );
+}
+
+function pageFamiliarWorld(t){
+  const tabs = [
+    {key:"people", label:t.people, icon:"users", data:FAMILIAR_PEOPLE},
+    {key:"places", label:t.places, icon:"map", data:FAMILIAR_PLACES},
+    {key:"objects", label:t.objects, icon:"box", data:FAMILIAR_OBJECTS},
+    {key:"routines", label:t.routines, icon:"clock", data:FAMILIAR_ROUTINES},
+  ];
+  let tabBtns = "";
+  tabs.forEach(function(tb){
+    tabBtns += '<button class="chip ' + (S.fwTab===tb.key?"selected":"") + '" data-action="fw-tab" data-tab="' + tb.key + '">' + icon(tb.icon, 18) + tb.label + "</button>";
+  });
+  const cur = tabs.filter(function(x){ return x.key===S.fwTab; })[0] || tabs[0];
+  let cards = "";
+  cur.data.forEach(function(item){
+    cards += (
+      '<div class="card" style="display:flex;gap:0.9rem;align-items:center">' +
+        '<span style="width:52px;height:52px;border-radius:14px;background:var(--tea-pale);color:var(--tea-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+          icon(item.icon) +
+        "</span>" +
+        "<span>" +
+          '<span style="font-weight:700;display:block">' + item.name + "</span>" +
+          '<span class="muted" style="font-size:0.92rem">' + item.relation + "</span>" +
+        "</span>" +
+      "</div>"
+    );
+  });
+  return (
+    '<div class="screen">' +
+      topBar(t, t.familiarWorld) +
+      '<div class="grow container" style="padding-top:1.5rem;padding-bottom:3rem">' +
+        '<div class="row wrap" style="margin-bottom:1.5rem">' + tabBtns + "</div>" +
+        '<div class="grid-auto">' + cards + "</div>" +
+      "</div>" +
+    "</div>"
+  );
+}
+
+function pageCaregiver(t){
+  let recentRows = "";
+  CAREGIVER_RECENT.forEach(function(r){
+    recentRows += (
+      '<div class="row between" style="padding:0.6rem 0;border-bottom:1px solid var(--tea-pale)">' +
+        "<span><strong>" + r.game + '</strong><br/><span class="faint" style="font-size:0.88rem">' + r.when + "</span></span>" +
+        '<span class="badge">' + r.score + "</span>" +
+      "</div>"
+    );
+  });
+  let triggerRows = "";
+  TRIGGER_ANALYSIS.forEach(function(item){
+    triggerRows += (
+      '<div class="hbar-row">' +
+        '<span class="muted">' + t[item.key] + "</span>" +
+        '<div class="hbar-track"><div class="hbar-fill" style="width:' + item.value + '%;background:var(--muga)"></div></div>' +
+        '<span style="font-weight:700;text-align:right">' + item.value + "%</span>" +
+      "</div>"
+    );
+  });
+  let domainRows = "";
+  PROGRESS_DOMAINS.forEach(function(d){
+    domainRows += (
+      '<div class="hbar-row">' +
+        '<span class="muted">' + t[d.key] + "</span>" +
+        '<div class="hbar-track"><div class="hbar-fill" style="width:' + d.value + '%;background:var(--tea)"></div></div>' +
+        '<span style="font-weight:700;text-align:right">' + d.value + "%</span>" +
+      "</div>"
+    );
+  });
+  let assignChips = "";
+  GAMES.forEach(function(g){
+    assignChips += '<span class="chip selected" style="cursor:default">' + icon(g.icon,18) + t[g.titleKey] + "</span>";
+  });
+  return (
+    '<div class="screen">' +
+      topBar(t, t.cgTitle) +
+      '<div class="grow container" style="padding-top:1.5rem;padding-bottom:3rem">' +
+        '<div class="row between" style="margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">' +
+          '<div class="row">' +
+            '<span style="width:48px;height:48px;border-radius:14px;background:var(--tea-pale);color:var(--tea-deep);display:flex;align-items:center;justify-content:center">' + icon("users") + "</span>" +
+            '<span><span class="faint" style="font-size:0.85rem;display:block">' + t.cgPatient + '</span><strong style="font-size:1.15rem">' + PATIENT_NAME + "</strong></span>" +
+          "</div>" +
+          '<span class="badge flag">' + icon("flag",16) + t.cgFlag + "</span>" +
+        "</div>" +
+
+        '<div class="card" style="margin-bottom:1.25rem;border-color:#e6c3b8;background:var(--flag-soft)">' +
+          '<p style="color:var(--gamusa-deep);font-weight:700">' + t.cgFlagText + "</p>" +
+        "</div>" +
+
+        '<div class="card stack" style="margin-bottom:1.25rem">' +
+          '<div class="row between">' +
+            '<h3 style="font-size:1.15rem">' + t.cgTrigger + "</h3>" +
+            '<span class="badge">' + t.bestStimulus + "</span>" +
+          "</div>" +
+          '<p class="muted secondary-info">' + t.cgTriggerDesc + "</p>" +
+          '<div class="stack" style="gap:0.65rem;margin-top:0.4rem">' + triggerRows + "</div>" +
+        "</div>" +
+
+        '<div class="card stack" style="margin-bottom:1.25rem">' +
+          '<h3 style="font-size:1.15rem">' + t.cgDomains + "</h3>" +
+          '<div class="stack" style="gap:0.65rem;margin-top:0.4rem">' + domainRows + "</div>" +
+        "</div>" +
+
+        '<div class="card" style="margin-bottom:1.25rem">' +
+          '<h3 style="font-size:1.15rem;margin-bottom:0.75rem">' + t.cgRecent + "</h3>" +
+          recentRows +
+        "</div>" +
+
+        '<div class="card stack">' +
+          '<h3 style="font-size:1.15rem">' + t.cgAssign + "</h3>" +
+          '<p class="faint secondary-info">' + t.cgAssignDesc + "</p>" +
+          '<div class="row wrap">' + assignChips + "</div>" +
+        "</div>" +
+
+        '<p class="faint secondary-info center" style="margin-top:1.5rem">' + t.cgNote + "</p>" +
+      "</div>" +
+    "</div>"
+  );
+}
+
+/* =========================================================
+   GAME STATE SETUP — called whenever the route changes to a
+   game screen, to (re)initialise that game's transient state.
+   ========================================================= */
+function setupGameState(gameId){
+  const diff = S.difficulty[gameId];
+  if(gameId === "jigsaw"){
+    const gridSize = diff==="easy" ? 2 : diff==="medium" ? 3 : 4;
+    const total = gridSize*gridSize;
+    S.game = {id:"jigsaw", diff:diff, gridSize:gridSize, total:total,
+      order: shuffle(Array.from({length: total}, function(_,i){ return i; })),
+      selected: null, mistakes: 0, hints: 0, done: false, seconds: 0};
+  } else if(gameId === "familiar"){
+    S.game = {id:"familiar", diff:diff, cards: shuffle(FAMILIAR_CARDS), idx: 0, stage:"ask",
+      correct: 0, mistakes: 0, done: false, seconds: 0};
+  } else if(gameId === "audio"){
+    const clipCount = diff==="easy" ? 2 : AUDIO_CLIPS.length;
+    S.game = {id:"audio", diff:diff, clips: shuffle(AUDIO_CLIPS).slice(0, clipCount), idx: 0,
+      played:false, correct:0, mistakes:0, done:false, seconds:0};
+  } else if(gameId === "routine"){
+    S.game = {id:"routine", diff:diff, pool: shuffle(ROUTINE_STEPS), chosen: [], mistakes: 0, done:false, seconds:0};
+  } else {
+    S.game = null;
+  }
+}
+
+function finishGame(gameId, correct, total, mistakes, hints, seconds){
+  const t = tFor(S.lang);
+  const accuracy = Math.round((correct/total)*100);
+  const usedDiff = S.difficulty[gameId];
+  const nd = nextDifficulty(usedDiff, accuracy);
+  S.difficulty = Object.assign({}, S.difficulty);
+  S.difficulty[gameId] = nd;
+  saveLS("smaran_difficulty", S.difficulty);
+  const titleKeyMap = {jigsaw:"jigsawTitle", familiar:"familiarTitle", audio:"audioTitle", routine:"routineTitle"};
+  S.lastResult = {
+    gameId: gameId, gameTitle: t[titleKeyMap[gameId]],
+    correct: correct, total: total, mistakes: mistakes, hints: hints,
+    timeSeconds: seconds, difficulty: usedDiff, nextDifficulty: nd,
+  };
+  setTimeout(function(){ nav("/patient/results"); }, 700);
+}
+
+/* ---- GAME 1: Adaptive Jigsaw ---- */
+function pageJigsaw(t){
+  const g = S.game;
+  const pieceSize = 480 / g.gridSize;
+  let pieces = "";
+  g.order.forEach(function(pieceId, posIndex){
+    const px = (pieceId % g.gridSize) * pieceSize;
+    const py = Math.floor(pieceId / g.gridSize) * pieceSize;
+    const correct = pieceId === posIndex;
+    const cls = "puzzle-piece" + (g.selected===posIndex?" selected":"") + (correct?" placed-correct":"");
+    const bgPos = (px/(480-pieceSize))*100 + "% " + (py/(480-pieceSize))*100 + "%";
+    pieces += '<div class="' + cls + '" data-action="jig-tap" data-pos="' + posIndex + '" style="' +
+      'background-image:url(&quot;' + SCENE_URI + '&quot;);background-size:' + (g.gridSize*100) + "% " + (g.gridSize*100) + "%;" +
+      "background-position:" + bgPos + ';"></div>';
+  });
+  return (
+    '<div class="screen">' +
+      topBar(t, t.jigsawTitle, {right:'<span class="badge secondary-info">' + t.difficulty + ": " + t[g.diff] + "</span>"}) +
+      '<div class="grow container center" style="padding-top:1.5rem;padding-bottom:2rem">' +
+        '<p class="muted" style="margin-bottom:1rem">' + t.tapToSwap + "</p>" +
+        '<div style="display:grid;grid-template-columns:repeat(' + g.gridSize + ',1fr);gap:4px;width:min(92vw,420px);aspect-ratio:1/1;margin:0 auto;background:var(--tea-deep);padding:6px;border-radius:16px">' +
+          pieces +
+        "</div>" +
+        '<div class="row" style="justify-content:center;gap:1rem;margin-top:1.5rem">' +
+          '<span class="badge">' + icon("clock",16) + Math.floor(g.seconds/60) + ":" + String(g.seconds%60).padStart(2,"0") + "</span>" +
+          '<span class="badge">' + icon("x",16) + t.mistakes + ": " + g.mistakes + "</span>" +
+          '<button class="btn btn-outline" data-action="jig-hint" ' + (g.done?"disabled":"") + ">" + t.hints + "</button>" +
+        "</div>" +
+      "</div>" +
+    "</div>"
+  );
+}
+function jigTap(pos){
+  const g = S.game;
+  if(g.done) return;
+  if(g.selected === null){ g.selected = pos; render(); return; }
+  if(g.selected === pos){ g.selected = null; render(); return; }
+  const tmp = g.order[g.selected]; g.order[g.selected] = g.order[pos]; g.order[pos] = tmp;
+  const madeMistake = g.order[pos]!==pos && g.order[g.selected]!==g.selected;
+  if(madeMistake) g.mistakes++;
+  g.selected = null;
+  if(g.order.every(function(v,i){ return v===i; })){
+    g.done = true;
+    finishGame("jigsaw", g.total - Math.min(g.mistakes, g.total), g.total, g.mistakes, g.hints, g.seconds);
+  }
+  render();
+}
+function jigHint(){
+  const g = S.game;
+  if(g.done) return;
+  g.hints++;
+  const wrongPos = g.order.findIndex(function(v,i){ return v!==i; });
+  if(wrongPos===-1){ render(); return; }
+  const correctPiecePos = g.order.indexOf(wrongPos);
+  const tmp = g.order[wrongPos]; g.order[wrongPos] = g.order[correctPiecePos]; g.order[correctPiecePos] = tmp;
+  if(g.order.every(function(v,i){ return v===i; })){
+    g.done = true;
+    finishGame("jigsaw", g.total - Math.min(g.mistakes, g.total), g.total, g.mistakes, g.hints, g.seconds);
+  }
+  render();
+}
+
+/* ---- GAME 2: Familiar / Unfamiliar ---- */
+function pageFamiliar(t){
+  const g = S.game;
+  const card = g.cards[g.idx];
+  if(!card) return "";
+  let body;
+  if(g.stage === "ask"){
+    body = (
+      '<p style="font-size:1.15rem;font-weight:700;margin-bottom:1rem">' + t.isFamiliar + "</p>" +
+      '<div class="row" style="justify-content:center;gap:1rem">' +
+        '<button class="btn btn-primary btn-lg" data-action="fam-answer" data-val="true">' + t.familiar + "</button>" +
+        '<button class="btn btn-outline btn-lg" data-action="fam-answer" data-val="false">' + t.notFamiliar + "</button>" +
+      "</div>"
+    );
+  } else {
+    let opts = "";
+    card.options.forEach(function(opt, i){
+      opts += '<button class="btn btn-outline btn-block" data-action="fam-who" data-index="' + i + '">' + opt + "</button>";
+    });
+    body = '<p style="font-size:1.15rem;font-weight:700;margin-bottom:1rem">' + t.whoIsThis + '</p><div class="stack">' + opts + "</div>";
+  }
+  return (
+    '<div class="screen">' +
+      topBar(t, t.familiarTitle, {right:'<span class="badge secondary-info">' + t.difficulty + ": " + t[g.diff] + "</span>"}) +
+      '<div class="grow container center" style="padding-top:1.5rem;padding-bottom:2rem;max-width:520px;margin:0 auto">' +
+        '<p class="faint secondary-info">' + (g.idx+1) + " " + t.of + " " + g.cards.length + "</p>" +
+        '<div class="card" style="margin:1rem 0 1.5rem">' +
+          '<div style="width:180px;height:180px;border-radius:20px;margin:0 auto 1rem;background:' + (card.isFamiliar?"var(--tea-pale)":"var(--cream-2)") +
+            ";display:flex;align-items:center;justify-content:center;border:2px dashed var(--tea-mist)\">" +
+            icon(card.isFamiliar?"users":"x", 64) +
+          "</div>" +
+          '<p class="display" style="font-size:1.4rem">' + card.name + "</p>" +
+        "</div>" +
+        body +
+      "</div>" +
+    "</div>"
+  );
+}
+function famAdvance(right){
+  const g = S.game;
+  g.correct += right ? 1 : 0;
+  g.mistakes += right ? 0 : 1;
+  if(g.idx+1 >= g.cards.length){
+    g.done = true;
+    finishGame("familiar", g.correct, g.cards.length, g.mistakes, 0, g.seconds);
+  } else {
+    g.idx++; g.stage = "ask";
+  }
+  render();
+}
+function famAnswer(saidFamiliar){
+  const g = S.game;
+  const card = g.cards[g.idx];
+  if(saidFamiliar && card.isFamiliar){ g.stage = "who"; render(); return; }
+  famAdvance(saidFamiliar === card.isFamiliar);
+}
+function famWho(index){
+  const g = S.game;
+  const card = g.cards[g.idx];
+  famAdvance(card.options[index] === card.options[0]);
+}
+
+/* ---- GAME 3: Familiar Audio ---- */
+function pageAudio(t){
+  const g = S.game;
+  const clip = g.clips[g.idx % g.clips.length];
+  if(!clip) return "";
+  let choices = "";
+  if(g.played){
+    clip.options.forEach(function(opt,i){
+      choices += '<button class="btn btn-outline btn-block" data-action="audio-choose" data-index="' + i + '">' + opt + "</button>";
+    });
+    choices = '<div class="stack fade-in"><p style="font-size:1.15rem;font-weight:700;margin:0.5rem 0 1rem">' + t.whoSpeaking + "</p>" + choices + "</div>";
+  }
+  return (
+    '<div class="screen">' +
+      topBar(t, t.audioTitle, {right:'<span class="badge secondary-info">' + t.difficulty + ": " + t[g.diff] + "</span>"}) +
+      '<div class="grow container center" style="padding-top:1.5rem;padding-bottom:2rem;max-width:520px;margin:0 auto">' +
+        '<p class="faint secondary-info">' + (g.idx+1) + " " + t.of + " " + g.clips.length + "</p>" +
+        '<button class="btn btn-accent btn-lg" style="width:160px;height:160px;border-radius:50%;margin:1.5rem auto;flex-direction:column" data-action="audio-play">' +
+          icon("volume", 44) + '<span style="margin-top:6px">' + t.listen + "</span>" +
+        "</button>" +
+        choices +
+      "</div>" +
+    "</div>"
+  );
+}
+function audioPlay(){
+  const g = S.game;
+  g.played = true;
+  const clip = g.clips[g.idx % g.clips.length];
+  speak(clip.text);
+  render();
+}
+function audioChoose(index){
+  const g = S.game;
+  const clip = g.clips[g.idx % g.clips.length];
+  const right = clip.options[index] === clip.speaker;
+  g.correct += right ? 1 : 0;
+  g.mistakes += right ? 0 : 1;
+  if(g.idx+1 >= g.clips.length){
+    g.done = true;
+    finishGame("audio", g.correct, g.clips.length, g.mistakes, 0, g.seconds);
+  } else {
+    g.idx++; g.played = false;
+  }
+  render();
+}
+
+/* ---- GAME 4: Daily Routine Recall ---- */
+function pageRoutine(t){
+  const g = S.game;
+  const remaining = g.pool.filter(function(s){ return !g.chosen.some(function(c){ return c.id===s.id; }); });
+  let chosenChips = "";
+  g.chosen.forEach(function(s,i){
+    chosenChips += '<span class="chip selected">' + icon(s.icon,16) + (i+1) + ". " + s.label + "</span>";
+  });
+  let remainChips = "";
+  remaining.forEach(function(s){
+    remainChips += '<button class="chip" data-action="routine-pick" data-id="' + s.id + '">' + icon(s.icon,18) + s.label + "</button>";
+  });
+  return (
+    '<div class="screen">' +
+      topBar(t, t.routineTitle, {right:'<span class="badge secondary-info">' + t.difficulty + ": " + t[g.diff] + "</span>"}) +
+      '<div class="grow container" style="padding-top:1.5rem;padding-bottom:2rem;max-width:560px;margin:0 auto">' +
+        '<p class="muted center" style="margin-bottom:1.25rem">' + t.tapOrder + "</p>" +
+        '<div class="card" style="margin-bottom:1.25rem">' +
+          '<p class="muted secondary-info" style="margin-bottom:0.5rem">' + t.yourOrder + "</p>" +
+          '<div class="row wrap" style="min-height:52px">' + chosenChips + "</div>" +
+        "</div>" +
+        '<div class="row wrap" style="justify-content:center">' + remainChips + "</div>" +
+        '<div class="row" style="justify-content:center;gap:1rem;margin-top:1.5rem">' +
+          '<span class="badge">' + icon("clock",16) + Math.floor(g.seconds/60) + ":" + String(g.seconds%60).padStart(2,"0") + "</span>" +
+          '<span class="badge">' + icon("x",16) + t.mistakes + ": " + g.mistakes + "</span>" +
+        "</div>" +
+      "</div>" +
+    "</div>"
+  );
+}
+function routinePick(id){
+  const g = S.game;
+  if(g.done) return;
+  const expected = ROUTINE_STEPS[g.chosen.length];
+  const step = g.pool.filter(function(s){ return s.id===id; })[0];
+  if(!step || expected.id !== id) g.mistakes++;
+  g.chosen.push(step);
+  if(g.chosen.length === ROUTINE_STEPS.length){
+    g.done = true;
+    const correctCount = g.chosen.filter(function(s,i){ return s.id === ROUTINE_STEPS[i].id; }).length;
+    finishGame("routine", correctCount, ROUTINE_STEPS.length, g.mistakes, 0, g.seconds);
+  }
+  render();
+}
+
+function pageResult(t){
+  const r = S.lastResult;
+  if(!r){
+    return (
+      '<div class="screen">' + topBar(t, t.great) +
+      '<div class="grow container center" style="display:flex;flex-direction:column;justify-content:center">' +
+        '<p class="muted">' + t.of + " — no recent activity yet.</p>" +
+        '<button class="btn btn-primary" style="margin:1rem auto" data-action="nav" data-path="/patient/today">' + t.backToActivities + "</button>" +
+      "</div></div>"
+    );
+  }
+  const accuracy = Math.round((r.correct/r.total)*100);
+  const nextDiff = r.nextDifficulty;
+  const order3 = ["easy","medium","hard"];
+  const changeMsg = nextDiff===r.difficulty ? t.maintaining :
+    (order3.indexOf(nextDiff) > order3.indexOf(r.difficulty) ? t.increasing : t.decreasing);
+  const encourage = accuracy>=85 ? t.encourage1 : accuracy>=60 ? t.encourage2 : t.encourage3;
+  const mm = String(Math.floor(r.timeSeconds/60)).padStart(2,"0");
+  const ss = String(r.timeSeconds%60).padStart(2,"0");
+
+  function statCard(label, val, sub){
+    return '<div class="card center"><p class="muted secondary-info">' + label + '</p><p class="display" style="font-size:2rem">' + val + "</p>" +
+      (sub ? '<p class="faint">' + sub + "</p>" : "") + "</div>";
+  }
+
+  return (
+    '<div class="screen">' +
+      topBar(t, r.gameTitle, {showBack:false}) +
+      '<div class="grow container fade-in" style="padding-top:1.75rem;padding-bottom:3rem;max-width:600px;margin:0 auto">' +
+        '<div class="center" style="margin-bottom:1.5rem">' +
+          '<div style="width:84px;height:84px;border-radius:50%;background:var(--tea-pale);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">' +
+            icon("star", 40) +
+          "</div>" +
+          '<h1 class="display" style="font-size:2rem">' + t.great + "</h1>" +
+          '<p class="muted" style="font-size:1.15rem;margin-top:0.4rem">' + encourage + "</p>" +
+        "</div>" +
+        '<div class="grid-2" style="margin-bottom:1rem">' +
+          statCard(t.score, accuracy+"%", r.correct + " " + t.of + " " + r.total) +
+          statCard(t.time, mm+":"+ss) +
+          statCard(t.mistakes, r.mistakes) +
+          statCard(t.hints, r.hints) +
+        "</div>" +
+        '<div class="card" style="margin-bottom:1.5rem">' +
+          '<div class="row between">' +
+            '<span><span class="muted">' + t.difficulty + ": </span><strong>" + t[r.difficulty] + "</strong></span>" +
+            '<span><span class="muted">' + t.nextDifficulty + ": </span><strong>" + t[nextDiff] + "</strong></span>" +
+          "</div>" +
+          '<p class="faint" style="margin-top:0.5rem">' + changeMsg + "</p>" +
+        "</div>" +
+        '<div class="stack">' +
+          '<button class="btn btn-primary btn-lg btn-block" data-action="nav" data-path="/patient/game/' + r.gameId + '">' + t.playAgain + "</button>" +
+          '<button class="btn btn-outline btn-block" data-action="nav" data-path="/patient/today">' + t.backToActivities + "</button>" +
+          '<button class="btn btn-ghost btn-block" data-action="nav" data-path="/patient/progress">' + t.viewProgress + "</button>" +
+        "</div>" +
+        '<p class="faint secondary-info center" style="margin-top:1.25rem">' + t.noMedicalClaim + "</p>" +
+      "</div>" +
+    "</div>"
+  );
+}
+
+/* =========================================================
+   Router + master render
+   ========================================================= */
+function applyA11y(){
+  const root = document.documentElement;
+  root.classList.toggle("large-text", S.a11y.largeText);
+  root.classList.toggle("high-contrast", S.a11y.highContrast);
+  root.classList.toggle("reduced-motion", S.a11y.reducedAnimation);
+  root.classList.toggle("simple-mode", S.a11y.simpleMode);
+}
+
+function renderRoute(path, t){
+  if(path === "/") return pageLanding(t);
+  if(path === "/role") return pageRole(t);
+  if(path === "/patient") return pagePatientHome(t);
+  if(path === "/patient/today") return pageToday(t);
+  if(path === "/patient/progress") return pageProgress(t);
+  if(path === "/patient/familiar-world") return pageFamiliarWorld(t);
+  if(path === "/patient/results") return pageResult(t);
+  if(path === "/settings") return pageSettings(t);
+  if(path === "/caregiver") return pageCaregiver(t);
+  if(path === "/patient/game/jigsaw") return pageJigsaw(t);
+  if(path === "/patient/game/familiar") return pageFamiliar(t);
+  if(path === "/patient/game/audio") return pageAudio(t);
+  if(path === "/patient/game/routine") return pageRoutine(t);
+  return pageLanding(t);
+}
+
+function render(){
+  applyA11y();
+  const t = tFor(S.lang);
+  document.getElementById("root").innerHTML = renderRoute(S.route, t);
+}
+
+function nav(path){ location.hash = path; }
+
+function onRouteChange(){
+  const newPath = location.hash.slice(1) || "/";
+  S.route = newPath;
+  const m = newPath.match(/^\/patient\/game\/(\w+)$/);
+  if(m){ setupGameState(m[1]); } else { S.game = null; }
+  render();
+}
+
+/* =========================================================
+   Timer — ticks once a second while a game is in progress
+   ========================================================= */
+let timerId = null;
+function startTimerLoop(){
+  if(timerId) return;
+  timerId = setInterval(function(){
+    if(S.game && !S.game.done){
+      S.game.seconds++;
+      render();
+    }
+  }, 1000);
+}
+
+/* =========================================================
+   Voice assistance (browser speech synthesis, optional)
+   ========================================================= */
+function speak(text){
+  if(!S.a11y.voiceAssist) return;
+  try{
+    if("speechSynthesis" in window){
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.92;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }
+  }catch(e){}
+}
+
+/* =========================================================
+   Click delegation — one listener handles every data-action
+   ========================================================= */
+document.addEventListener("click", function(e){
+  const el = e.target.closest("[data-action]");
+  if(!el) return;
+  const action = el.dataset.action;
+  const d = el.dataset;
+
+  if(action === "nav"){ nav(d.path); return; }
+  if(action === "go-back"){ history.back(); return; }
+
+  if(action === "set-lang"){ S.lang = d.lang; saveLS("smaran_lang", S.lang); render(); return; }
+
+  if(action === "toggle-a11y"){
+    S.a11y = Object.assign({}, S.a11y);
+    S.a11y[d.key] = !S.a11y[d.key];
+    saveLS("smaran_a11y", S.a11y);
+    render();
+    return;
+  }
+  if(action === "toggle-offline"){ S.offline = !S.offline; render(); return; }
+  if(action === "save-settings"){
+    S.settingsSaved = true; render();
+    setTimeout(function(){ S.settingsSaved = false; render(); }, 1600);
+    return;
+  }
+  if(action === "fw-tab"){ S.fwTab = d.tab; render(); return; }
+
+  if(action === "jig-tap"){ jigTap(parseInt(d.pos,10)); return; }
+  if(action === "jig-hint"){ jigHint(); return; }
+
+  if(action === "fam-answer"){ famAnswer(d.val === "true"); return; }
+  if(action === "fam-who"){ famWho(parseInt(d.index,10)); return; }
+
+  if(action === "audio-play"){ audioPlay(); return; }
+  if(action === "audio-choose"){ audioChoose(parseInt(d.index,10)); return; }
+
+  if(action === "routine-pick"){ routinePick(d.id); return; }
+});
+
+/* =========================================================
+   Bootstrap
+   ========================================================= */
+window.addEventListener("hashchange", onRouteChange);
+if(!location.hash) location.hash = "/";
+onRouteChange();
+startTimerLoop();
+</script>
+</body>
+</html>
